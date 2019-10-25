@@ -215,7 +215,7 @@ void handle_udp_packets(){
 	sockaddr_in udp_addr;
 
 	//create socket for UDP connection
-	udp_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	udp_sock = socket(AF_INET, SOCK_DGRAM, 0);
 	if (udp_sock < 0){
 		printf("udp_socket creation failed\n"); 
         exit(0);
@@ -226,7 +226,7 @@ void handle_udp_packets(){
 	udp_addr.sin_port = htons(LOCAL_PORT);
 
 	//bind socket to port
-	if(bind(udp_sock, reinterpret_cast<sockaddr *>(&udp_addr), sizeof(udp_addr)) < 1){
+	if(bind(udp_sock, reinterpret_cast<sockaddr *>(&udp_addr), sizeof(udp_addr)) < 0){
 		//if bind failed
 		puts("udp_socket bind failed");
 		exit(0);
@@ -255,7 +255,7 @@ void handle_udp_packets(){
 		//good packet
 		else{
 			do_packet_stuff();
-			//cout << Packet:  buffer 
+			cout << "<Packet>\n" << bytes << "\n";
 		} 
 	}
 	
