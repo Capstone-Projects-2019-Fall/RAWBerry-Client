@@ -79,7 +79,7 @@ static bool send_cmd(SOCKET rtsp_socket,
 
 			//msg sent and reply recieved successfully
 			return true;
-			break;
+			break; 
 		}
 	}
 	//no reply, something went wrong
@@ -203,8 +203,13 @@ bool session_handler(SOCKET rtsp_socket, int &request_count, string &session_id)
 	return true;	
 }
 
-void do_packet_stuff(){
-
+void do_packet_stuff(char *buffer){
+	/* TODO: 
+	/	Sort packets by sequence number
+	/	remove rdp header from packet	
+	/	take a quick cry break
+	/	reassemble packets into file
+	*/
 }
 
 //
@@ -233,8 +238,8 @@ void handle_udp_packets(){
 	}
 	else{
 
-		#ifdef DEBUG_UDP
-			cout "<<\n------------------------\n" + "udp_sock bound to port " + LOCAL_PORT + "\n------------------------\n";
+		#ifdef DEBUG_PACKET
+			cout "<<\n------------------------\n" << "udp_sock bound to port " << LOCAL_PORT << "\n------------------------\n";
 		#endif
 		
 	}
@@ -254,7 +259,7 @@ void handle_udp_packets(){
 		}
 		//good packet
 		else{
-			do_packet_stuff();
+			do_packet_stuff(buffer);
 			cout << "<Packet>\n" << bytes << "\n";
 		} 
 	}
@@ -288,7 +293,9 @@ int main(){
     rtsp_addr.sin_addr.s_addr = INADDR_ANY;					//IP doesn't matter yet, testing locally. FIX BEFORE DEMO!
     rtsp_addr.sin_port        = htons(8554);                // listen on RTSP port 8554
 
-	
+	/*
+	TODO: Loop forever without breaking 
+	*/
 	//while (true)
 	//{
 	
@@ -322,7 +329,6 @@ int main(){
 			handle_udp_packets();
 
 		}
-
 
 
 		close(rtsp_sock);
