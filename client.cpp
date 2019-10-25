@@ -1,3 +1,9 @@
+//Used for debugging sections
+//comment out to remove debug messages
+//#define DEBUG_MAIN 1
+//#define DEBUG_SEND 1
+#define DEBUG_PACKET 1
+
 #define RSTP_ADDRESS "127.0.1.1"
 #define RTSP_PORT 8554
 #define RTSP_PATH "/mjpeg/1"
@@ -6,7 +12,6 @@
 //local port for UDP stream
 #define LOCAL_PORT 8555
 
-#define DEBUG 1 //comment out to remove debug messages
 
 #include <string>
 #include <iostream>
@@ -37,14 +42,14 @@ static bool send_cmd(SOCKET rtsp_socket,
 	string request, string &reply){
 
 
-	#ifdef DEBUG
+	#ifdef DEBUG_SEND
 		cout <<"\n---------------------------------\n" << "<request>\n" << request <<"\n---------------------------------\n\n";
 	#endif
 
 	//get server url
 	string url = build_url();
 
-	#ifdef DEBUG
+	#ifdef DEBUG_SEND
 		cout << "\n---------------------------------\n" << "<server url>\n" << url << "\n---------------------------------\n\n";
 	#endif
 	
@@ -65,7 +70,7 @@ static bool send_cmd(SOCKET rtsp_socket,
 			//get reply
 			reply = string(buffer, bytes);
 			
-			#ifdef DEBUG
+			#ifdef DEBUG_SEND
 				cout << "\n---------------------------------\n" << "<reply>\n" << reply << "\n---------------------------------\n\n" ;
 			#endif
 
@@ -111,45 +116,92 @@ bool send_describe(SOCKET rtsp_socket, int &request_count){
 }
 
 //ok, I actually followed the standards on this one.
-bool send_setup(SOCKET rtsp_socket, int &request_count){
-	ostringstream request;
+bool send_setup(SOCKET rtsp_socket, int &request_count, string &session_id){
 	
+	ostringstream request;
 	request << "SETUP " << build_url << " RTSP/1.0\r\n"
 		<< "CSeq: " << request_count << "\r\n"
-		<< "Transport: RTP/AVP;unicast;client_port=" << LOCAL_PORT << "-" << LOCAL_PORT + 1 << "\r\n"
-		<< "User-Agent: RAWBerry\r\n"
-		<< "\r\n";
+		<< "Transport: RTP/AVP;unicast;client_port=" << LOCAL_PORT << "-" << LOCAL_PORT + 1 << "\r\n" //sending local port to server
+		<< "\r\n\r\n";
 	
 	request_count++;
 
 	string reply;
-	return send_cmd(rtsp_socket, request.str(), reply);
+	//send cmd to server
+	if (!send_cmd(rtsp_socket, request.str(), reply))
+		return false; // if send failed or no response
+
+	//get session id from reply
+	size_t a = reply.find("Session: ");
+	size_t b = reply.find("\r", a);
+	session_id = reply.substr(a, b-a);
+	
+	return true;
+
 }
 
-bool send_play(SOCKET rtsp_socket, int &request_count){
+bool send_play(SOCKET rtsp_socket, int &request_count, string &session_id){
 	ostringstream request;
 	
 	request << "PLAY " << build_url << " RTSP/1.0\r\n"
 		<< "CSeq: " << request_count << "\r\n"
-		<< "frknrf\r\n"
-		<< "fkrnknf\r\n"
-		<< "jmfmwefmwke\r\n";
+		<< "Session: " << session_id << "\r\n"
+		<< "\r\n\r\n";
 	
 	request_count++;
 	string reply;
 	return send_cmd(rtsp_socket, request.str(), reply);
 }
 
-void session_handler(SOCKET rtsp_socket, int &request_count){
+bool session_handler(SOCKET rtsp_socket, int &request_count, string &session_id){
 	
-	// Send OPTIONS, DESCRIBE, SETUP, and PLAY requests to establish RTSP
-	send_options(rtsp_socket, request_count);
 
-	send_describe(rtsp_socket, request_count);
+	//clear the session id
+	session_id = "";
 
-	send_setup(rtsp_socket, request_count);
+	// Send OPTIONS, DESCRIBE, SETUP, and PLAY requests to set up RTSP
+	if (!send_options(rtsp_socket, request_count)){
+				
+		#ifdef DEBUG_SEND
+			cout << "!!!!!!!!!!!!!\n" << "send_options failed"	<< "\n!!!!!!!!!!!!!!!!!!\n";
+		#endif
 
-	send_play(rtsp_socket, request_count);
+		return false;
+	}
+
+	if (!send_describe(rtsp_socket, request_count)){
+				
+		#ifdef DEBUG_SEND
+			cout << "!!!!!!!!!!!!!\n" << "send_describe failed"	<< "\n!!!!!!!!!!!!!!!!!!\n";
+		#endif
+
+		return false;
+	}
+
+	if (!send_setup(rtsp_socket, request_count, session_id)){
+
+		#ifdef DEBUG_SEND
+			cout << "!!!!!!!!!!!!!\n" << "send_setup failed"	<< "\n!!!!!!!!!!!!!!!!!!\n";
+		#endif
+
+		 return false;
+	}
+
+	if (!send_play(rtsp_socket, request_count, session_id)){
+		
+		#ifdef DEBUG_SEND
+			cout << "!!!!!!!!!!!!!\n" << "send_play failed"	<< "\n!!!!!!!!!!!!!!!!!!\n";
+		#endif
+
+		return false;
+	}
+
+	//session setup success
+	return true;	
+}
+
+void handle_rtp_packets(){
+
 }
 
 int main(){
@@ -157,8 +209,22 @@ int main(){
 	//for rtsp socket
 	SOCKET rtsp_sock;
 	sockaddr_in rtsp_addr;
-	//tracking server requests
+	//for udp stream
+	SOCKET udp_sock;
+	sockaddr_in udp_addr;
+	//for server controls
 	int request_count = 1;
+	string session_id;
+	string server_url;
+
+
+
+	//create socket for UDP connection
+	udp_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (udp_sock < 0){
+		printf("udp socket creation failed\n"); 
+        exit(0);
+	}
 
 	//create socket for RTSP Connection
 	rtsp_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);	//SET TO IPV6 SOON!
@@ -185,12 +251,28 @@ int main(){
 	//else socket success
 	else {
 
-		#ifdef DEBUG
-			cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << "rtsp_sock connected!" << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!";
+		#ifdef DEBUG_MAIN
+			cout << "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n" << "rtsp_sock connected!" << "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
 		#endif
-		
+	
 		//handle rtsp session
-		session_handler(rtsp_sock, request_count);
+		if(session_handler(rtsp_sock, request_count, session_id) == false){
+			//session handling failed :(
+				//Blame the server
+				cout << "Server Error\n";
+			
+				#ifdef DEBUG_MAIN
+				cout << "Yep, couldn't be the client. I'm *PERFECT*\n";
+				#endif
+
+		}
+		//else session looks good
+		else{
+			handle_rtp_packets();
+
+		}
+
+
 
 		close(rtsp_sock);
 		}
