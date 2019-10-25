@@ -4,13 +4,16 @@
 //#define DEBUG_SEND 1
 #define DEBUG_PACKET 1
 
+//for socket connections
 #define RSTP_ADDRESS "127.0.1.1"
 #define RTSP_PORT 8554
 #define RTSP_PATH "/mjpeg/1"
 #define BUFF_SIZE 4096
 
+//max time to wait for a packet
+#define MAX_WAIT 1
 //local port for UDP stream
-#define LOCAL_PORT 8555
+#define LOCAL_PORT 8888
 
 
 #include <string>
@@ -200,8 +203,66 @@ bool session_handler(SOCKET rtsp_socket, int &request_count, string &session_id)
 	return true;	
 }
 
-void handle_rtp_packets(){
+void do_packet_stuff(){
 
+}
+
+//
+void handle_udp_packets(){
+
+	//for udp stream
+	SOCKET udp_sock;
+	sockaddr_in udp_addr;
+
+	//create socket for UDP connection
+	udp_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (udp_sock < 0){
+		printf("udp_socket creation failed\n"); 
+        exit(0);
+	}
+
+	udp_addr.sin_family = AF_INET;
+	udp_addr.sin_addr.s_addr = INADDR_ANY;
+	udp_addr.sin_port = htons(LOCAL_PORT);
+
+	//bind socket to port
+	if(bind(udp_sock, reinterpret_cast<sockaddr *>(&udp_addr), sizeof(udp_addr)) < 1){
+		//if bind failed
+		puts("udp_socket bind failed");
+		exit(0);
+	}
+	else{
+
+		#ifdef DEBUG_UDP
+			cout "<<\n------------------------\n" + "udp_sock bound to port " + LOCAL_PORT + "\n------------------------\n";
+		#endif
+		
+	}
+
+	//collect packets forever
+	//will add better conditions later
+	while (true){
+		char buffer[BUFF_SIZE];
+		//get next packet
+		int bytes = recv(udp_sock, buffer, BUFF_SIZE, 0);
+		
+		//bad / no backet
+		if (bytes < 1){
+			#ifdef DEBUG_PACKET
+				cout << "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n" << "packet not read" << "\n!!!!!!!!!!!!!!!!!!!!!!\n";
+			#endif
+		}
+		//good packet
+		else{
+			do_packet_stuff();
+			//cout << Packet:  buffer 
+		} 
+	}
+	
+
+	
+
+	
 }
 
 int main(){
@@ -209,22 +270,12 @@ int main(){
 	//for rtsp socket
 	SOCKET rtsp_sock;
 	sockaddr_in rtsp_addr;
-	//for udp stream
-	SOCKET udp_sock;
-	sockaddr_in udp_addr;
 	//for server controls
 	int request_count = 1;
 	string session_id;
 	string server_url;
 
 
-
-	//create socket for UDP connection
-	udp_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	if (udp_sock < 0){
-		printf("udp socket creation failed\n"); 
-        exit(0);
-	}
 
 	//create socket for RTSP Connection
 	rtsp_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);	//SET TO IPV6 SOON!
@@ -268,7 +319,7 @@ int main(){
 		}
 		//else session looks good
 		else{
-			handle_rtp_packets();
+			handle_udp_packets();
 
 		}
 
