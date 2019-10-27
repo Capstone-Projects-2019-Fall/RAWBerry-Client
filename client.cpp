@@ -244,7 +244,7 @@ void merge_frame(char **&frame_buffer, int packet_count){
 // process packets and adds them to a buffer.
 void do_packet_stuff(char *&packet, char **&frame_buffer, int &packet_count){
 	#ifdef DEBUG_PACKET
-	cout << "\nPACKET[1] =" << (packet[1]>>7) << "\n";
+	cout << "\nPACKET[1] =" << (uint)packet[1] << "\n";
 	#endif
 	//check if it's the last packet in the sequence
 	bool last_packet = false;
