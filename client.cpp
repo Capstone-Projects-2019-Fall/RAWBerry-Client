@@ -207,18 +207,19 @@ bool session_handler(SOCKET rtsp_socket, int &request_count, string &session_id)
 
 //sends frame to decoder
 void frame_to_decoder(string frame){
-	FILE *file = fopen("/tmp/test.mp4", "w+");
-	std::fwrite(frame.c_str(), frame.length(), 1, file);
-	return;
+	//FILE *file = fopen("/tmp/test", "w+");
+	//std::fwrite(frame.c_str(), frame.length(), 1, file);
+	//return;
 }
 
-void merge_frame(char **&frame_buffer, int packet_count){
+void merge_frame(unsigned char **&frame_buffer, int packet_count){
 	size_t size = 0;
 	std::ostringstream frame;
 	//check if all packets are assembled
 	for (size_t i = 0; i < packet_count; i++){
 		
 		if (frame_buffer[i] != NULL){
+			puts("!");
 			frame << frame_buffer[i];
 		}
 
@@ -230,9 +231,12 @@ void merge_frame(char **&frame_buffer, int packet_count){
 
 			//for now, just give up and clear the memory
 			for (size_t j = 0; j < packet_count; j++){
-				free(frame_buffer[j]);
+				//if (frame_buffer[j] != NULL)
+					//free(frame_buffer[j]);	
 			}
-			free(frame_buffer);
+			if (frame_buffer != NULL)
+				//free(frame_buffer);
+			
 			return;
 		}
 
@@ -242,9 +246,9 @@ void merge_frame(char **&frame_buffer, int packet_count){
 
 // TODO: Break up into smaller functions
 // process packets and adds them to a buffer.
-void do_packet_stuff(char *&packet, char **&frame_buffer, int &packet_count){
+void do_packet_stuff(unsigned char *&packet, unsigned char **&frame_buffer, int &packet_count){
 	#ifdef DEBUG_PACKET
-	cout << "\nPACKET[1] =" << (uint)packet[1] << "\n";
+	cout << "\nPACKET[1] = " << (uint)packet[1] << "\n";
 	#endif
 	//check if it's the last packet in the sequence
 	bool last_packet = false;
@@ -257,21 +261,27 @@ void do_packet_stuff(char *&packet, char **&frame_buffer, int &packet_count){
 		#endif
 	}
 
+	#ifdef DEBUG_PACKET
+		cout << "Packet[2] = " << (uint32_t)packet[2] << "\n";
+		cout << "Packet[3] = " << (uint32_t)packet[3] << "\n";
+		cout << "Packet[4] = " << (uint32_t)packet[4] << "\n";
+		cout << "Packet[5] = " << (uint32_t)packet[5] << "\n";
+	#endif
+	
+	uint32_t seq = 0;
+	
+	
+	seq = seq | (packet[4] & 0x0FF);
+	seq = seq << 8;
+	seq = seq | (packet[5] & 0x0FF);
 
 	//get the packet's sequence number
 	//split between 4 bytes in the packet
-	//Assumes client computer isn't a dinosaur and that an int is 4 bytes
-	uint seq1 = packet[2];
-	uint seq2 = packet[3];
-	uint seq3 = packet[4];
-	uint seq4 = packet[5];	
-	//combine into one int
-	uint seq	= seq1 | (seq2 << 8) | (seq3 << 16) | (seq4 << 24);
 	
 
 
 	#ifdef DEBUG_PACKET
-		printf("Seq1: %u\nSeq2: %u\nSeq3: %u\nSeq4: %u\nSeq: %hu", seq1, seq2, seq3, seq4, seq);
+		printf("Packet Sequence: %u\n", seq);
 	#endif
 
 	//remove the 16 byte header, it's garbage now
@@ -282,10 +292,13 @@ void do_packet_stuff(char *&packet, char **&frame_buffer, int &packet_count){
 	frame_buffer[seq] = packet;
 	packet_count ++;
 	
+	FILE *f = fopen("/tmp/test", "w");
+	fwrite(packet, BUFF_SIZE, 1, f);
+	fclose(f);
 	//if last packet in sequence
 	if (last_packet){
 		//merge packets together and send it to decoder
-		merge_frame(frame_buffer, packet_count);
+		//merge_frame(frame_buffer, packet_count);
 		packet_count = 0;
 	}
 }
@@ -293,7 +306,7 @@ void do_packet_stuff(char *&packet, char **&frame_buffer, int &packet_count){
 void handle_udp_packets(){
 
 	//for tracking packets
-	char **frame_buffer = (char **)malloc(sizeof(char) * BUFF_SIZE);
+	unsigned char **frame_buffer = (unsigned char **)malloc(sizeof(char) * BUFF_SIZE);
 	int packet_count = 0;
 
 	//for udp stream
@@ -328,7 +341,7 @@ void handle_udp_packets(){
 	//collect packets forever
 	//will add better conditions later
 	while (true){
-		char *packet = (char *)malloc(sizeof(char)*BUFF_SIZE);
+		unsigned char *packet = (unsigned char *)malloc(sizeof(char)*BUFF_SIZE);
 		//get next packet
 		int bytes = recv(udp_sock, packet, BUFF_SIZE, 0);
 		
@@ -341,7 +354,7 @@ void handle_udp_packets(){
 		//good packet
 		else{
 			do_packet_stuff(packet, frame_buffer, packet_count);
-			cout << "<Packet>\n" << bytes << "\n";
+			//cout << "<Packet>\n" << bytes << "\n";
 		} 
 	}
 	
