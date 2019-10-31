@@ -20,14 +20,14 @@ static bool send_cmd(SOCKET rtsp_socket,
 
 
 	#ifdef DEBUG_SEND
-		cout <<"\n---------------------------------\n" << "<request>\n" << request <<"\n---------------------------------\n\n";
+		cout << "request: " << request <<"\n";
 	#endif
 
 	//get server url
 	string url = build_url();
 
 	#ifdef DEBUG_SEND
-		cout << "\n---------------------------------\n" << "<server url>\n" << url << "\n---------------------------------\n\n";
+		cout << "server url = " << url << "\n";
 	#endif
 	
 	//send request to server
@@ -229,44 +229,47 @@ Byte:     |      0        |      1        |      2 to 5   |      6 to 9       | 
 
 //Get the packet's sequence number
 //broken up over 4 bytes, use binary operators to combine them,
-unsigned int get_packet_sequence(unsigned char *packet){
+uint32_t get_packet_sequence(unsigned char *packet){
 	
-	uint seq = 0;		
+	uint32_t seq = 0;
 	
 	// 0, 0, 0, p[5]
-	seq = seq | (packet[5] & 0x0FF);
+	seq += (uint8_t)packet[2];
 	seq = seq << 8;
 	// 0, 0, p[5], p[4]
-	seq = seq | (packet[4] & 0x0FF);
+	seq += (uint8_t)packet[3];
 	seq = seq << 8;
 	//0, p[5], [p4], p[3]
-	seq = seq | packet[3];
+	seq += (uint8_t)packet[4];
 	seq = seq << 8;
 	//fully assembled
-	seq = seq | packet[4];
+	seq += (uint8_t)packet[5];
 
 	#ifdef DEBUG_PACKET
-		cout << "\nget_packet_sequence()" 
-		<< "\n Seqence Number = " << seq << "\n";
+		cout << "get_packet_sequence()\n" 
+		<< "Seqence Number = " << seq << "\n"
+		<< "packet[5] = " << (uint)packet[5] << "\n"
+		<< "packet[4] = " << (uint)packet[4] << "\n"
+		<< "packet[3] = " << (uint)packet[3] << "\n"
+		<< "packet[2] = " << (uint)packet[2] << "\n";
 	#endif
 
 	return seq;
 }
 
 //check if packet is the last one in sequence
-bool is_last_packet(unsigned char p_byte){
+bool is_last_packet(unsigned char packet){
 	//looking at the first bit in byte one.
 	//M on the packet diagram
-	if (p_byte >> 7 == 1){
+	if (packet >> 7 == 1){
+		
 		#ifdef DEBUG_PACKET
 			cout << "LAST PACKET\n";
 		#endif
-		
+
 		return true;
 	}
 	return false;
-
-	
 }
 void handle_packet(unsigned char *&packet, unsigned char **&frame_buffer, int &packet_count){
 	
@@ -288,7 +291,7 @@ void handle_packet(unsigned char *&packet, unsigned char **&frame_buffer, int &p
 	//if last packet in sequence
 	if (last_packet){
 		//merge packets together and send it to decoder
-		//merge_frame(frame_buffer, packet_count);
+		merge_frame(frame_buffer, packet_count);
 		packet_count = 0;
 	}
 }
