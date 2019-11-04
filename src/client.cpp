@@ -1,3 +1,7 @@
+
+//testing lib 
+#include "../test/catch.hpp"
+//header
 #include "./client.hpp"
 
 using namespace std;
@@ -75,6 +79,7 @@ bool send_options(SOCKET rtsp_socket, int &request_count){
 		<< "user=admin\r\n"
 		<< "\r\n";
 	string reply;
+	
 	return send_cmd(rtsp_socket, request.str(), reply);
 }
 bool send_describe(SOCKET rtsp_socket, int &request_count){
@@ -140,7 +145,7 @@ bool session_handler(SOCKET rtsp_socket, int &request_count, string &session_id)
 	if (!send_options(rtsp_socket, request_count)){
 				
 		#ifdef DEBUG_SEND
-			cout << "!!!!!!!!!!!!!\n" << "send_options failed"	<< "\n!!!!!!!!!!!!!!!!!!\n";
+			cout << "\n" << "send_options failed"	<< "\n";
 		#endif
 
 		return false;
@@ -149,7 +154,7 @@ bool session_handler(SOCKET rtsp_socket, int &request_count, string &session_id)
 	if (!send_describe(rtsp_socket, request_count)){
 				
 		#ifdef DEBUG_SEND
-			cout << "!!!!!!!!!!!!!\n" << "send_describe failed"	<< "\n!!!!!!!!!!!!!!!!!!\n";
+			cout << "\n" << "send_describe failed"	<< "\n";
 		#endif
 
 		return false;
@@ -158,7 +163,7 @@ bool session_handler(SOCKET rtsp_socket, int &request_count, string &session_id)
 	if (!send_setup(rtsp_socket, request_count, session_id)){
 
 		#ifdef DEBUG_SEND
-			cout << "!!!!!!!!!!!!!\n" << "send_setup failed"	<< "\n!!!!!!!!!!!!!!!!!!\n";
+			cout << "\n" << "send_setup failed"	<< "\n";
 		#endif
 
 		 return false;
@@ -167,7 +172,7 @@ bool session_handler(SOCKET rtsp_socket, int &request_count, string &session_id)
 	if (!send_play(rtsp_socket, request_count, session_id)){
 		
 		#ifdef DEBUG_SEND
-			cout << "!!!!!!!!!!!!!\n" << "send_play failed"	<< "\n!!!!!!!!!!!!!!!!!!\n";
+			cout << "\n" << "send_play failed"	<< "\n";
 		#endif
 
 		return false;
@@ -186,36 +191,17 @@ void frame_to_decoder(string frame){
 	//return;
 }
 
-void merge_frame(unsigned char **&frame_buffer, int packet_count){
+//combine all the payloads together into one giant payload
+unsigned char* merge_frame(unsigned char **&frame_buffer, int packet_count){
 	size_t size = 0;
 	std::ostringstream frame;
 	//check if all packets are assembled
 	for (size_t i = 0; i < packet_count; i++){
-		
+		unsigned frame_buffer = malloc () 
 		if (frame_buffer[i] != NULL){
-			puts("!");
 			frame << frame_buffer[i];
 		}
 
-		else {
-			/* 
-			missing a packet :(
-			TODO: Find better way of handling this (Maybe spin off a thread that waits for the missing frame?)
-			*/
-
-			//for now, just give up and clear the memory
-			for (size_t j = 0; j < packet_count; j++){
-				//if (frame_buffer[j] != NULL)
-					//free(frame_buffer[j]);	
-			}
-			if (frame_buffer != NULL)
-				//free(frame_buffer);
-			
-			return;
-		}
-
-	}
-	frame_to_decoder(frame.str());
 }
 
 /*
@@ -225,35 +211,34 @@ Byte:     |      0        |      1        |      2 to 5   |      6 to 9       | 
 
 */
 
-//NEED TEST CASE
-
 //Get the packet's sequence number
 //broken up over 4 bytes, use binary operators to combine them,
 uint32_t get_packet_sequence(unsigned char *packet){
 	
-	uint32_t seq = 0;
-	
-	// 0, 0, 0, p[5]
-	seq += (uint8_t)packet[2];
-	seq = seq << 8;
-	// 0, 0, p[5], p[4]
-	seq += (uint8_t)packet[3];
-	seq = seq << 8;
-	//0, p[5], [p4], p[3]
-	seq += (uint8_t)packet[4];
-	seq = seq << 8;
-	//fully assembled
-	seq += (uint8_t)packet[5];
-
 	#ifdef DEBUG_PACKET
 		cout << "get_packet_sequence()\n" 
-		<< "Seqence Number = " << seq << "\n"
 		<< "packet[5] = " << (uint)packet[5] << "\n"
 		<< "packet[4] = " << (uint)packet[4] << "\n"
 		<< "packet[3] = " << (uint)packet[3] << "\n"
 		<< "packet[2] = " << (uint)packet[2] << "\n";
 	#endif
 
+	// 0, 0, 0, p[5]
+	uint seq = (uint8_t)packet[5];
+	seq = seq << 8;
+	// 0, 0, p[5], p[4]
+	seq = seq | (uint8_t)packet[4];
+	seq = seq << 8;
+	//0, p[5], [p4], p[3]
+	seq = seq | (uint8_t)packet[3];
+	seq = seq << 8;
+	//fully assembled
+	seq = seq | (uint8_t)packet[2];
+
+	#ifdef DEBUG_PACKET
+		cout << "seq = " << seq << "\n";
+	#endif
+	
 	return seq;
 }
 
@@ -271,6 +256,8 @@ bool is_last_packet(unsigned char packet){
 	}
 	return false;
 }
+
+
 void handle_packet(unsigned char *&packet, unsigned char **&frame_buffer, int &packet_count){
 	
 	//get the sequence number of the packet

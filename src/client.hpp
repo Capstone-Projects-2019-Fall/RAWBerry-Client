@@ -20,13 +20,12 @@
 //our *MODIFIED* RTP header size
 #define RTP_HEADER_SIZE 14
 
-
 #include <string>
 #include <iostream>
 #include <sstream>
 #include <unistd.h> 
 #include <stdio.h> 
-#include <sys/socket.h> 
+#include <sys/socket.h>
 #include <stdlib.h> 
 #include <netinet/in.h> 
 #include <netdb.h> 
@@ -64,7 +63,7 @@ bool session_handler(SOCKET rtsp_socket, int &request_count, string &session_id)
 //sends frame to decoder
 void frame_to_decoder(string frame);
 //merge the packets into a single payload
-void merge_packets(unsigned char **&frame_buffer, int packet_count);
+string merge_packets(unsigned char **&frame_buffer, int packet_count);
 //Get the packet's sequence number
 uint32_t get_packet_sequence(unsigned char *packet);
 //check if packet is the last one in sequence
