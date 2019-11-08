@@ -1,9 +1,12 @@
 #include "./src/client.cpp"
-//Used for debugging msgs in client.pp
-//comment out to remove debug messages
-//#define DEBUG_MAIN 1
-//#define DEBUG_SEND 1
-#define DEBUG_PACKET 1
+
+/*
+ / Used for debugging msgs in client.cpp
+ / Comment out to remove debug messages
+ / Moved here to avoid conflict with test.cpp
+*/ 
+
+
 
 int main(){
 

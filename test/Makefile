@@ -1,4 +1,4 @@
 SRCS = ./test.cpp
 run: *.cpp
-	g++ -o ./test -I . *.cpp $(SRCS)
+	g++ -o ./test $(SRCS)
 	./test

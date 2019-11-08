@@ -1,4 +1,10 @@
 
+#define DEBUG_MAIN 1
+#define DEBUG_SEND 1
+#define DEBUG_PACKET 1	
+#define DEBUG_WRITE 1
+#define DEBUG_MERGE 1
+
 //testing lib 
 #include "../test/catch.hpp"
 //header
@@ -6,6 +12,8 @@
 
 using namespace std;
 typedef int SOCKET;
+//holds total expected size of the frame
+uint64_t frame_size;
 
 //make a string of the server's url
 string build_url(){
@@ -185,23 +193,84 @@ bool session_handler(SOCKET rtsp_socket, int &request_count, string &session_id)
 
 
 //sends frame to decoder
-void frame_to_decoder(string frame){
-	//FILE *file = fopen("/tmp/test", "w+");
-	//std::fwrite(frame.c_str(), frame.length(), 1, file);
-	//return;
+void frame_to_decoder(unsigned char ** packet_buffer, int packet_count){
+	#ifdef DEBUG_WRITE
+		cout << "Writing frame to file\n";
+	#endif
+	FILE *file = fopen("/tmp/test.dng", "w+");
+	for (int i = 0; i < packet_count; i++){
+		fwrite(*packet_buffer, MAX_PACKET_SIZE, 1, file);
+		packet_buffer++;
+	}
+	return;
 }
 
 //combine all the payloads together into one giant payload
-unsigned char* merge_frame(unsigned char **&frame_buffer, int packet_count){
-	size_t size = 0;
-	std::ostringstream frame;
-	//check if all packets are assembled
-	for (size_t i = 0; i < packet_count; i++){
-		unsigned frame_buffer = malloc () 
-		if (frame_buffer[i] != NULL){
-			frame << frame_buffer[i];
-		}
+unsigned char * merge_frame(unsigned char **packet_buffer, int packet_count){
+	
+	
 
+	#ifdef N
+	//used to write packet payloads into a single string of uchars
+	unsigned char *frame = (unsigned char *)(malloc(sizeof(unsigned char) * frame_size));
+	unsigned char *frame_ptr = frame;
+
+	//used to read through the packet_buffer
+	unsigned char **buf_ptr = packet_buffer;
+
+	//track bytes writen to frame
+	int bytes = 0;
+	//loop through each packet
+	for (int i = 0; i < packet_count; i++){
+		//loop through each byte of packet, minus the header size
+		#ifdef DEBUG_MERGE
+			cout << "Merging packet " << i <<"\n";
+		#endif
+
+		for(int j = 0; j < MAX_PACKET_SIZE - RTP_HEADER_SIZE; j ++){
+			//stop at end of last packet, which may be shorter than the MAX_PACKET_SIZE
+			if (bytes >= frame_size){
+				break;
+			}
+			bytes++; 
+			memcp
+
+			#ifdef DEBUG_MERGE
+				cout << "Wrote byte " << j <<" to frame\n";
+			#endif
+		}
+		buf_ptr ++;
+	}
+	unsigned char **buf_ptr = packet_buffer;
+	//string stream used to write input from each packet
+	ostringstream frame;
+	
+	#ifdef DEBUG_MERGE
+		cout << "merging packets\n";
+	#endif
+
+	//go through each packet
+	for (size_t i = 0; i < packet_count; i++){
+		if (*buf_ptr == NULL){
+			//missing packet, handle this
+			#ifdef DEBUG_MERGE
+				cout << "NULL packet found in merge_frame()\n";
+			#endif
+			return NULL;
+		}
+		//else 
+		else{
+			frame << *buf_ptr;
+			buf_ptr++;
+			#ifdef DEBUG_MERGE
+				cout << "merged packet " << i << "\n";
+			#endif
+		}
+	}
+	//return the frame as a pointer to an usigned char
+	return (unsigned char *)frame.str().c_str();
+	
+	#endif
 }
 
 /*
@@ -278,7 +347,7 @@ void handle_packet(unsigned char *&packet, unsigned char **&frame_buffer, int &p
 	//if last packet in sequence
 	if (last_packet){
 		//merge packets together and send it to decoder
-		merge_frame(frame_buffer, packet_count);
+		frame_to_decoder(frame_buffer, packet_count);
 		packet_count = 0;
 	}
 }
@@ -286,7 +355,7 @@ void handle_packet(unsigned char *&packet, unsigned char **&frame_buffer, int &p
 void receive_packets(){
 
 	//for tracking packets
-	unsigned char **frame_buffer = (unsigned char **)malloc(sizeof(char) * BUFF_SIZE);
+	unsigned char **frame_buffer = (unsigned char **)malloc(sizeof(unsigned char) * MAX_PACKET_COUNT * MAX_PACKET_SIZE);
 	int packet_count = 0;
 
 	//for udp stream
@@ -318,10 +387,11 @@ void receive_packets(){
 		
 	}
 
+	frame_size = 0;
 	//collect packets forever
 	//will add better conditions later
 	while (true){
-		unsigned char *packet = (unsigned char *)malloc(sizeof(char)*BUFF_SIZE);
+		unsigned char *packet = (unsigned char *)malloc(sizeof(unsigned char)*BUFF_SIZE);
 		//get next packet
 		int bytes = recv(udp_sock, packet, BUFF_SIZE, 0);
 		
@@ -333,6 +403,7 @@ void receive_packets(){
 		}
 		//good packet
 		else{
+			frame_size += bytes - RTP_HEADER_SIZE;
 			handle_packet(packet, frame_buffer, packet_count);
 		} 
 	}
