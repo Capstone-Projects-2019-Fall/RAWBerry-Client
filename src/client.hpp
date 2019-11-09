@@ -4,7 +4,7 @@
 #define RSTP_ADDRESS "127.0.1.1"
 #define RTSP_PORT 8554
 #define RTSP_PATH "/mjpeg/1"
-#define RTP_HEADER_SIZE 18
+#define RTP_HEADER_SIZE 14
 #define BUFF_SIZE 6000
 
 //Packet info

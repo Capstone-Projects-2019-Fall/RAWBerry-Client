@@ -197,12 +197,14 @@ void frame_to_decoder(unsigned char ** packet_buffer, int packet_count){
 	#ifdef DEBUG_WRITE
 		cout << "Writing frame to file\n";
 	#endif
-	FILE *file = fopen("/tmp/test.dng", "w+");
+	FILE *file = fopen("/tmp/test.GPR", "w+");
 	for (int i = 0; i < packet_count; i++){
+		printf("Packet No: %d\n", i);
 		fwrite(*packet_buffer, MAX_PACKET_SIZE, 1, file);
 		packet_buffer++;
 	}
-	return;
+	exit (EXIT_SUCCESS);
+	//return;
 }
 
 //combine all the payloads together into one giant payload
@@ -291,6 +293,25 @@ uint32_t get_packet_sequence(unsigned char *packet){
 		<< "packet[3] = " << (uint)packet[3] << "\n"
 		<< "packet[2] = " << (uint)packet[2] << "\n";
 	#endif
+		cout << "FullHeader()\n" 
+		//<< "packet[0] = " << (uint)packet[0] << "\n"
+		//<< "packet[1] = " << (uint)packet[1] << "\n"
+		//<< "packet[2] = " << (uint)packet[2] << "\n"
+		//<< "packet[3] = " << (uint)packet[3] << "\n"
+		//<< "packet[4] = " << (uint)packet[4] << "\n"
+		//<< "packet[5] = " << (uint)packet[5] << "\n"
+		//<< "packet[6] = " << (uint)packet[6] << "\n"
+		//<< "packet[7] = " << (uint)packet[7] << "\n"
+		//<< "packet[8] = " << (uint)packet[8] << "\n"
+		//<< "packet[9] = " << (uint)packet[9] << "\n"
+		//<< "packet[10] = " << (uint)packet[10] << "\n"
+		//<< "packet[11] = " << (uint)packet[11] << "\n"
+		<< "packet[12] = " << (uint)packet[12] << "\n"
+		<< "packet[13] = " << (uint)packet[13] << "\n"
+		<< "packet[14] = " << (uint)packet[14] << "\n"
+		<< "packet[15] = " << (uint)packet[15] << "\n"
+		<< "packet[16] = " << (uint)packet[16] << "\n"
+		<< "packet[17] = " << (uint)packet[17] << "\n";
 
 	// 0, 0, 0, p[5]
 	uint seq = (uint8_t)packet[5];
