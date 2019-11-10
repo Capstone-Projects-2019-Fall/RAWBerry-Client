@@ -6,9 +6,36 @@
  / Moved here to avoid conflict with test.cpp
 */ 
 
+//local def & instantiation to default locals - globaly defined as externs in header
+string rtsp_a = RSTP_ADDRESS;
+int trsp_p = RTSP_PORT;
+string rtsp_pth = RTSP_PATH;
 
 
-int main(){
+int configure_URL(int argc, char **argv) {
+
+	if (argc != 4) {//if not 3 necessary parameters, use defualt locals
+		cout << "Using Default URL Parameters: "
+			<< RSTP_ADDRESS << ", "
+			<< RTSP_PORT << ", "
+			<< RTSP_PATH;
+
+		//leave globals unchanged from default instantiation
+	}
+	else { //otherwise, attempt to create socket using parameters - socket() handles error
+		
+		rtsp_a = argv[1];
+		rtsp_p = atoi(argv[2]);	//cast string to int var
+		rtsp_pth = argv[3];
+		
+		cout << "URL Parameters: "
+			<< rtsp_a << ", "
+			<< rtsp_p << ", "
+			<< rtsp_pth;
+	}
+}
+
+int main(int argc, char **argv){
 
 	//for rtsp socket
 	SOCKET rtsp_sock;
@@ -27,9 +54,11 @@ int main(){
         exit(0); 
     } 
 
-	rtsp_addr.sin_family      = AF_INET;					//NEED TO SWITCH TO IPV6 BEFORE DEMO
-    rtsp_addr.sin_addr.s_addr = INADDR_ANY;					//IP doesn't matter yet, testing locally. FIX BEFORE DEMO!
-    rtsp_addr.sin_port        = htons(8554);                // listen on RTSP port 8554
+	configure_URL(argc, argv);//will use parameters, or set to default local values
+
+	rtsp_addr.sin_family      = AF_INET; //IPv4 is fine
+    rtsp_addr.sin_addr.s_addr = rtsp_a; //IP address from argv[1] OR default locals
+    rtsp_addr.sin_port        = htons(rtsp_p); //Port# from argv[2] OR default locals
 
 	/*
 	TODO: Loop forever without breaking 

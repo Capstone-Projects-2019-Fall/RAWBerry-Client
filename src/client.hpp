@@ -1,6 +1,6 @@
 #pragma once
 
-//for socket connections
+//for default (local) socket connections
 #define RSTP_ADDRESS "127.0.1.1"
 #define RTSP_PORT 8554
 #define RTSP_PATH "/mjpeg/1"
@@ -29,6 +29,13 @@
 
 using namespace std;
 typedef int SOCKET;
+
+
+//for configurable socket and path
+extern string rtsp_a;
+extern int rtsp_p;
+extern string rtsp_pth;
+
 
 //make a string of the server's url
 string build_url();
