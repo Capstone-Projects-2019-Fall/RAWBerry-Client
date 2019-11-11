@@ -1,9 +1,9 @@
 
-#define DEBUG_MAIN 1
-#define DEBUG_SEND 1
-#define DEBUG_PACKET 1	
-#define DEBUG_WRITE 1
-#define DEBUG_MERGE 1
+//#define DEBUG_MAIN 1
+//#define DEBUG_SEND 1
+//#define DEBUG_PACKET 1	
+//#define DEBUG_WRITE 1
+//#define DEBUG_MERGE 1
 
 //testing lib 
 #include "../test/catch.hpp"
@@ -199,20 +199,39 @@ void frame_to_decoder(unsigned char ** packet_buffer, int packet_count){
 	#endif
 	FILE *file = fopen("/tmp/test.GPR", "w+");
 	for (int i = 0; i < packet_count; i++){
-		printf("Packet No: %d\n", i);
-		fwrite(*packet_buffer, MAX_PACKET_SIZE, 1, file);
-		packet_buffer++;
+		//if missing packet
+		if (*packet_buffer == NULL){
+			cout << "MISSING Packet No:" << i << "\n";
+			exit(EXIT_FAILURE);
+		}
+		//if regular packet
+		if (i < packet_count -1){
+			printf("Packet No: %d\n", i);
+			fwrite(*packet_buffer, MAX_PACKET_SIZE, 1, file);
+			packet_buffer++;
+		}
+		//else last packet
+		else {
+			printf("Last Packet No: %d\nsize: ", i);
+			printf("%" PRIu64 "\n", frame_size % MAX_PACKET_SIZE);
+
+			//used calculated last packet size, since it can be between 1 and 1100
+			fwrite(*packet_buffer, frame_size % MAX_PACKET_SIZE, 1, file);
+			packet_buffer++;
+			//for (i=0; i < 912; ++i)
+    		//cout << *packet_buffer++ << "";
+		}
 	}
-	exit (EXIT_SUCCESS);
-	//return;
+	fclose(file);
+	//exit (EXIT_SUCCESS);
+	return;
 }
 
+//currently not in use
+#ifdef N
 //combine all the payloads together into one giant payload
-unsigned char * merge_frame(unsigned char **packet_buffer, int packet_count){
+unsigned char * merge_frame(unsigned char *packet_buffer[], int packet_count){
 	
-	
-
-	#ifdef N
 	//used to write packet payloads into a single string of uchars
 	unsigned char *frame = (unsigned char *)(malloc(sizeof(unsigned char) * frame_size));
 	unsigned char *frame_ptr = frame;
@@ -235,7 +254,6 @@ unsigned char * merge_frame(unsigned char **packet_buffer, int packet_count){
 				break;
 			}
 			bytes++; 
-			memcp
 
 			#ifdef DEBUG_MERGE
 				cout << "Wrote byte " << j <<" to frame\n";
@@ -272,8 +290,9 @@ unsigned char * merge_frame(unsigned char **packet_buffer, int packet_count){
 	//return the frame as a pointer to an usigned char
 	return (unsigned char *)frame.str().c_str();
 	
-	#endif
+	
 }
+#endif
 
 /*
 Byte:     |      0        |      1        |      2 to 5   |      6 to 9       |      10 to 13     |       14+           |
@@ -287,31 +306,27 @@ Byte:     |      0        |      1        |      2 to 5   |      6 to 9       | 
 uint32_t get_packet_sequence(unsigned char *packet){
 	
 	#ifdef DEBUG_PACKET
-		cout << "get_packet_sequence()\n" 
-		<< "packet[5] = " << (uint)packet[5] << "\n"
-		<< "packet[4] = " << (uint)packet[4] << "\n"
+		cout << "get_packet_sequence()\n"
+		
+		<< "packet[0] = " << (uint)packet[0] << "\n"
+		<< "packet[1] = " << (uint)packet[1] << "\n" 
+		<< "packet[2] = " << (uint)packet[2] << "\n"
 		<< "packet[3] = " << (uint)packet[3] << "\n"
-		<< "packet[2] = " << (uint)packet[2] << "\n";
-	#endif
-		cout << "FullHeader()\n" 
-		//<< "packet[0] = " << (uint)packet[0] << "\n"
-		//<< "packet[1] = " << (uint)packet[1] << "\n"
-		//<< "packet[2] = " << (uint)packet[2] << "\n"
-		//<< "packet[3] = " << (uint)packet[3] << "\n"
-		//<< "packet[4] = " << (uint)packet[4] << "\n"
-		//<< "packet[5] = " << (uint)packet[5] << "\n"
-		//<< "packet[6] = " << (uint)packet[6] << "\n"
-		//<< "packet[7] = " << (uint)packet[7] << "\n"
-		//<< "packet[8] = " << (uint)packet[8] << "\n"
-		//<< "packet[9] = " << (uint)packet[9] << "\n"
-		//<< "packet[10] = " << (uint)packet[10] << "\n"
-		//<< "packet[11] = " << (uint)packet[11] << "\n"
+		<< "packet[4] = " << (uint)packet[4] << "\n"
+		<< "packet[5] = " << (uint)packet[5] << "\n"
+		<< "packet[6] = " << (uint)packet[6] << "\n"
+		<< "packet[7] = " << (uint)packet[7] << "\n"
+		<< "packet[8] = " << (uint)packet[8] << "\n"
+		<< "packet[9] = " << (uint)packet[9] << "\n"
+		<< "packet[10] = " << (uint)packet[10] << "\n"
+		<< "packet[11] = " << (uint)packet[11] << "\n"
 		<< "packet[12] = " << (uint)packet[12] << "\n"
 		<< "packet[13] = " << (uint)packet[13] << "\n"
-		<< "packet[14] = " << (uint)packet[14] << "\n"
-		<< "packet[15] = " << (uint)packet[15] << "\n"
-		<< "packet[16] = " << (uint)packet[16] << "\n"
-		<< "packet[17] = " << (uint)packet[17] << "\n";
+		//<< "packet[14] = " << (uint)packet[14] << "\n"
+		//<< "packet[15] = " << (uint)packet[15] << "\n"
+		//<< "packet[16] = " << (uint)packet[16] << "\n"
+		//<< "packet[17] = " << (uint)packet[17] << "\n";
+	#endif
 
 	// 0, 0, 0, p[5]
 	uint seq = (uint8_t)packet[5];
@@ -348,7 +363,7 @@ bool is_last_packet(unsigned char packet){
 }
 
 
-void handle_packet(unsigned char *&packet, unsigned char **&frame_buffer, int &packet_count){
+void handle_packet(unsigned char *packet, unsigned char *frame_buffer[], int &packet_count){
 	
 	//get the sequence number of the packet
 	uint sequence_num = get_packet_sequence(packet);
@@ -358,7 +373,7 @@ void handle_packet(unsigned char *&packet, unsigned char **&frame_buffer, int &p
 
 	//get_timestamp()
 
-	//remove the 16 byte header, it's garbage now
+	//remove the 14 byte header, it's garbage now
 	packet += RTP_HEADER_SIZE;
 
 	//add packet to frame buffer
@@ -367,16 +382,18 @@ void handle_packet(unsigned char *&packet, unsigned char **&frame_buffer, int &p
 	
 	//if last packet in sequence
 	if (last_packet){
-		//merge packets together and send it to decoder
+		//send packets to decoder
 		frame_to_decoder(frame_buffer, packet_count);
 		packet_count = 0;
+		//reset frame size
+		frame_size = 0;
 	}
 }
 
 void receive_packets(){
 
 	//for tracking packets
-	unsigned char **frame_buffer = (unsigned char **)malloc(sizeof(unsigned char) * MAX_PACKET_COUNT * MAX_PACKET_SIZE);
+	unsigned char *frame_buffer[MAX_PACKET_COUNT];
 	int packet_count = 0;
 
 	//for udp stream
@@ -412,9 +429,10 @@ void receive_packets(){
 	//collect packets forever
 	//will add better conditions later
 	while (true){
-		unsigned char *packet = (unsigned char *)malloc(sizeof(unsigned char)*BUFF_SIZE);
+		unsigned char *packet = (unsigned char *)malloc(sizeof(unsigned char *) * (MAX_PACKET_SIZE + RTP_HEADER_SIZE));
+		
 		//get next packet
-		int bytes = recv(udp_sock, packet, BUFF_SIZE, 0);
+		int bytes = recv(udp_sock, packet, MAX_PACKET_SIZE + RTP_HEADER_SIZE, 0);
 		
 		//bad or no packet
 		if (bytes < 1){

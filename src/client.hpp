@@ -8,7 +8,7 @@
 #define BUFF_SIZE 6000
 
 //Packet info
-#define MAX_PACKET_COUNT 16777
+#define MAX_PACKET_COUNT 5000
 #define MAX_PACKET_SIZE 1100
 //max time to wait for a packet
 #define MAX_WAIT 1
@@ -26,6 +26,7 @@
 #include <netinet/in.h> 
 #include <netdb.h> 
 #include <string.h>
+#include <inttypes.h>
 
 using namespace std;
 typedef int SOCKET;
@@ -67,7 +68,7 @@ uint32_t get_packet_sequence(unsigned char *packet);
 bool is_last_packet(unsigned char p_byte);
 
 //handles rpt packets
-void handle_packet(unsigned char *&packet, unsigned char **&frame_buffer, int &packet_count);
+void handle_packet(unsigned char *packet, unsigned char **frame_buffer, int &packet_count);
 //recieves rtp packets sent by the server
 void receive_packets();
 

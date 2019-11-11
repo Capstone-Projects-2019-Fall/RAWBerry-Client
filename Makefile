@@ -1,6 +1,6 @@
 SRCS = ./main.cpp
 
-run: *.cpp ./src* 
+run: *.cpp
 	skill testclient
-	g++ -o testclient $(SRCS)
+	g++ -o testclient -I . $(SRCS)
 	./testclient
