@@ -15,12 +15,13 @@ typedef int SOCKET;
 //holds total expected size of the frame
 uint64_t frame_size;
 
+
 //make a string of the server's url
 string build_url(){
 
 	ostringstream url;
 
-	url << "rstp://" << RSTP_ADDRESS << ":" << RTSP_PORT << RTSP_PATH;
+	url << "rstp://" << rtsp_a << ":" << rtsp_p << rtsp_pth;
 
 	return url.str();
 
