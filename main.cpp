@@ -8,7 +8,7 @@
 
 //local def & instantiation to default locals - globaly defined as externs in header
 string rtsp_a = RSTP_ADDRESS;
-int trsp_p = RTSP_PORT;
+int rtsp_p = RTSP_PORT;
 string rtsp_pth = RTSP_PATH;
 
 
@@ -48,7 +48,7 @@ int main(int argc, char **argv){
 
 
 	//create socket for RTSP Connection
-	rtsp_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);	//SET TO IPV6 SOON!
+	rtsp_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (rtsp_sock < 0) { 
         printf("socket creation failed\n"); 
         exit(0); 
@@ -57,7 +57,7 @@ int main(int argc, char **argv){
 	configure_URL(argc, argv);//will use parameters, or set to default local values
 
 	rtsp_addr.sin_family      = AF_INET; //IPv4 is fine
-    rtsp_addr.sin_addr.s_addr = rtsp_a; //IP address from argv[1] OR default locals
+    rtsp_addr.sin_addr.s_addr = inet_addr(rtsp_a.c_str()); //IP address from argv[1] OR default locals
     rtsp_addr.sin_port        = htons(rtsp_p); //Port# from argv[2] OR default locals
 
 	/*
@@ -77,7 +77,7 @@ int main(int argc, char **argv){
 	else {
 
 		#ifdef DEBUG_MAIN
-			cout << "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n" << "rtsp_sock connected!" << "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+			cout << "" << "rtsp_sock connected!" << "\n";
 		#endif
 	
 		//handle rtsp session

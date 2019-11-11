@@ -21,12 +21,13 @@
 #include <sstream>
 #include <unistd.h> 
 #include <stdio.h> 
-#include <sys/socket.h>
 #include <stdlib.h> 
-#include <netinet/in.h> 
-#include <netdb.h> 
 #include <string.h>
 #include <inttypes.h>
+#include <netdb.h> 
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 using namespace std;
 typedef int SOCKET;
