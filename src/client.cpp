@@ -1,8 +1,8 @@
 
-//#define DEBUG_MAIN 1
-//#define DEBUG_SEND 1
-//#define DEBUG_PACKET 1	
-//#define DEBUG_WRITE 1
+#define DEBUG_MAIN 1
+#define DEBUG_SEND 1
+#define DEBUG_PACKET 1	
+#define DEBUG_WRITE 1
 //#define DEBUG_MERGE 1
 
 //testing lib 
@@ -14,7 +14,10 @@ using namespace std;
 typedef int SOCKET;
 //holds total expected size of the frame
 uint64_t frame_size;
+//holds the current frame count
+int frame_count = 0;
 
+int pipe_fd = open(OUTPUT_PIPE, O_WRONLY);
 
 //make a string of the server's url
 string build_url(){
@@ -191,15 +194,63 @@ bool session_handler(SOCKET rtsp_socket, int &request_count, string &session_id)
 	return true;	
 }
 
-
-
 //sends frame to decoder
 void frame_to_decoder(unsigned char ** packet_buffer, int packet_count){
 	#ifdef DEBUG_WRITE
+		cout << "Writing frame to pipe\n";
+	#endif
+
+	//used to pipe frame into decoder
+	//int pipe_fd = open(OUTPUT_PIPE, O_WRONLY);
+	printf("SIZE: %d\n", frame_size);
+	//write size of frame to pipe first, so recieving program knows how much to read
+	write(pipe_fd, &frame_size, sizeof(int));
+
+	//for each packet
+	for (int i = 0; i < packet_count; i++){
+		//if missing packet
+		if (*packet_buffer == NULL){
+			//cout << "MISSING Packet No:" << i << "\n";
+			exit(EXIT_FAILURE);
+		}
+		//if regular packet
+		if (i < packet_count -1){
+			//printf("Packet No: %d\n", i);
+			write(pipe_fd, *packet_buffer, MAX_PACKET_SIZE);
+			packet_buffer++;
+		}
+		//else last packet
+		else {
+			//printf("Last Packet No: %d\nsize: ", i);
+			printf("%" PRIu64 "\n", frame_size % MAX_PACKET_SIZE);
+			//used calculated last packet size, since it can be between 1 and 1100
+			write(pipe_fd, *packet_buffer, frame_size % MAX_PACKET_SIZE);
+			packet_buffer++;
+		}
+	}
+	//close(pipe_fd);
+	
+	#ifdef DEBUG_WRITE
+		cout << "Finished writing to pipe\n";
+	#endif
+	
+	return;
+}
+
+//write the frame to a file
+void frame_to_file(unsigned char **packet_buffer, int packet_count){
+
+	#ifdef DEBUG_WRITE
 		cout << "Writing frame to file\n";
 	#endif
-	FILE *file = fopen("/tmp/test.GPR", "w+");
+	frame_size += 1;
+	//save frame as a file
+	string path = "/tmp/"+ std::to_string(frame_count) +".GPR";
+	FILE *out_file = fopen(path.c_str(), "w+");
+	
+	//for each packet
 	for (int i = 0; i < packet_count; i++){
+	
 		//if missing packet
 		if (*packet_buffer == NULL){
 			cout << "MISSING Packet No:" << i << "\n";
@@ -208,92 +259,28 @@ void frame_to_decoder(unsigned char ** packet_buffer, int packet_count){
 		//if regular packet
 		if (i < packet_count -1){
 			printf("Packet No: %d\n", i);
-			fwrite(*packet_buffer, MAX_PACKET_SIZE, 1, file);
+			fwrite(*packet_buffer, MAX_PACKET_SIZE, 1, out_file);
 			packet_buffer++;
 		}
 		//else last packet
 		else {
 			printf("Last Packet No: %d\nsize: ", i);
 			printf("%" PRIu64 "\n", frame_size % MAX_PACKET_SIZE);
-
 			//used calculated last packet size, since it can be between 1 and 1100
-			fwrite(*packet_buffer, frame_size % MAX_PACKET_SIZE, 1, file);
+			fwrite(*packet_buffer, frame_size % MAX_PACKET_SIZE, 1, out_file);
 			packet_buffer++;
-			//for (i=0; i < 912; ++i)
-    		//cout << *packet_buffer++ << "";
 		}
 	}
-	fclose(file);
-	//exit (EXIT_SUCCESS);
+
+	fclose(out_file);
+	
+	#ifdef DEBUG_WRITE
+		cout << "Finished writing to file\n";
+	#endif
+
 	return;
 }
 
-//currently not in use
-#ifdef N
-//combine all the payloads together into one giant payload
-unsigned char * merge_frame(unsigned char *packet_buffer[], int packet_count){
-	
-	//used to write packet payloads into a single string of uchars
-	unsigned char *frame = (unsigned char *)(malloc(sizeof(unsigned char) * frame_size));
-	unsigned char *frame_ptr = frame;
-
-	//used to read through the packet_buffer
-	unsigned char **buf_ptr = packet_buffer;
-
-	//track bytes writen to frame
-	int bytes = 0;
-	//loop through each packet
-	for (int i = 0; i < packet_count; i++){
-		//loop through each byte of packet, minus the header size
-		#ifdef DEBUG_MERGE
-			cout << "Merging packet " << i <<"\n";
-		#endif
-
-		for(int j = 0; j < MAX_PACKET_SIZE - RTP_HEADER_SIZE; j ++){
-			//stop at end of last packet, which may be shorter than the MAX_PACKET_SIZE
-			if (bytes >= frame_size){
-				break;
-			}
-			bytes++; 
-
-			#ifdef DEBUG_MERGE
-				cout << "Wrote byte " << j <<" to frame\n";
-			#endif
-		}
-		buf_ptr ++;
-	}
-	unsigned char **buf_ptr = packet_buffer;
-	//string stream used to write input from each packet
-	ostringstream frame;
-	
-	#ifdef DEBUG_MERGE
-		cout << "merging packets\n";
-	#endif
-
-	//go through each packet
-	for (size_t i = 0; i < packet_count; i++){
-		if (*buf_ptr == NULL){
-			//missing packet, handle this
-			#ifdef DEBUG_MERGE
-				cout << "NULL packet found in merge_frame()\n";
-			#endif
-			return NULL;
-		}
-		//else 
-		else{
-			frame << *buf_ptr;
-			buf_ptr++;
-			#ifdef DEBUG_MERGE
-				cout << "merged packet " << i << "\n";
-			#endif
-		}
-	}
-	//return the frame as a pointer to an usigned char
-	return (unsigned char *)frame.str().c_str();
-	
-	
-}
-#endif
 
 /*
 Byte:     |      0        |      1        |      2 to 5   |      6 to 9       |      10 to 13     |       14+           |
@@ -306,7 +293,7 @@ Byte:     |      0        |      1        |      2 to 5   |      6 to 9       | 
 //broken up over 4 bytes, use binary operators to combine them,
 uint32_t get_packet_sequence(unsigned char *packet){
 	
-	#ifdef DEBUG_PACKET
+	#ifdef DEBUG_PACKE
 		cout << "get_packet_sequence()\n"
 		
 		<< "packet[0] = " << (uint)packet[0] << "\n"
@@ -322,7 +309,7 @@ uint32_t get_packet_sequence(unsigned char *packet){
 		<< "packet[10] = " << (uint)packet[10] << "\n"
 		<< "packet[11] = " << (uint)packet[11] << "\n"
 		<< "packet[12] = " << (uint)packet[12] << "\n"
-		<< "packet[13] = " << (uint)packet[13] << "\n"
+		<< "packet[13] = " << (uint)packet[13] << "\n";
 		//<< "packet[14] = " << (uint)packet[14] << "\n"
 		//<< "packet[15] = " << (uint)packet[15] << "\n"
 		//<< "packet[16] = " << (uint)packet[16] << "\n"
@@ -383,7 +370,9 @@ void handle_packet(unsigned char *packet, unsigned char *frame_buffer[], int &pa
 	
 	//if last packet in sequence
 	if (last_packet){
+		frame_count++;
 		//send packets to decoder
+		frame_to_file(frame_buffer, packet_count);
 		frame_to_decoder(frame_buffer, packet_count);
 		packet_count = 0;
 		//reset frame size

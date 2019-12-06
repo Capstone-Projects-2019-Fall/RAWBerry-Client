@@ -1,7 +1,7 @@
 #pragma once
 
 //for default (local) socket connections
-#define RSTP_ADDRESS "127.0.1.1"
+#define RSTP_ADDRESS "192.168.2.41"
 #define RTSP_PORT 8554
 #define RTSP_PATH "/mjpeg/1"
 #define RTP_HEADER_SIZE 14
@@ -15,6 +15,9 @@
 //local port for UDP stream
 #define LOCAL_PORT 8888
 
+//for piping frame to decoder
+#define OUTPUT_PIPE "/tmp/ipipe"
+
 
 #include <string>
 #include <iostream>
@@ -25,6 +28,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include <netdb.h> 
+#include <fcntl.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>

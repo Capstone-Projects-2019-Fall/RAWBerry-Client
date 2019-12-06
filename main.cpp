@@ -14,11 +14,11 @@ string rtsp_pth = RTSP_PATH;
 
 int configure_URL(int argc, char **argv) {
 
-	if (argc != 4) {//if not 3 necessary parameters, use defualt locals
+	if (argc != 3) {//if not 3 necessary parameters, use defualt locals
 		cout << "Using Default URL Parameters: "
 			<< RSTP_ADDRESS << ", "
 			<< RTSP_PORT << ", "
-			<< RTSP_PATH;
+			<< RTSP_PATH << "\n";
 
 		//leave globals unchanged from default instantiation
 	}
@@ -26,12 +26,12 @@ int configure_URL(int argc, char **argv) {
 		
 		rtsp_a = argv[1];
 		rtsp_p = atoi(argv[2]);	//cast string to int var
-		rtsp_pth = argv[3];
+		rtsp_pth = RTSP_PATH;
 		
 		cout << "URL Parameters: "
 			<< rtsp_a << ", "
 			<< rtsp_p << ", "
-			<< rtsp_pth;
+			<< rtsp_pth << "\n";
 	}
 }
 
@@ -54,8 +54,9 @@ int main(int argc, char **argv){
         exit(0); 
     } 
 
+	puts("1");
 	configure_URL(argc, argv);//will use parameters, or set to default local values
-
+puts("2");
 	rtsp_addr.sin_family      = AF_INET; //IPv4 is fine
     rtsp_addr.sin_addr.s_addr = inet_addr(rtsp_a.c_str()); //IP address from argv[1] OR default locals
     rtsp_addr.sin_port        = htons(rtsp_p); //Port# from argv[2] OR default locals
